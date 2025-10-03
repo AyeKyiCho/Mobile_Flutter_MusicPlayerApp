@@ -1,0 +1,374 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.dark;
+  final Map<String, bool> trackStatus = {
+    'The Grudge': true,
+    'Eon Blue Apocalypse': true,
+    'The Patient': true,
+    'Mantra': true,
+    'Schism': true,
+    'Parabol': true,
+    'Parabola': true,
+  };
+
+  String? _currentTrack;
+  double _progress = 0.0;
+  Timer? _timer;
+
+  void _toggleTheme(bool isDark) {
+    setState(() {
+      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
+
+  void _setCurrentTrack(String title) {
+    if (trackStatus[title] == false) return;
+
+    setState(() {
+      _currentTrack = title;
+      _progress = 0.0;
+    });
+
+    _startPlayback();
+  }
+
+  void _startPlayback() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      setState(() {
+        _progress += 0.01;
+        if (_progress >= 1.0) {
+          _progress = 0.0;
+          timer.cancel();
+          _currentTrack = null;
+        }
+      });
+    });
+  }
+
+  void _stopPlayback() {
+    _timer?.cancel();
+    setState(() {
+      _progress = 0.0;
+      _currentTrack = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Lateralus Player',
+      debugShowCheckedModeBanner: false,
+      themeMode: _themeMode,
+      theme: ThemeData.light().copyWith(
+        colorScheme: ColorScheme.light(
+          primary: Colors.deepPurple,
+          secondary: Colors.deepPurpleAccent,
+          surface: Colors.grey[100]!,
+          background: Colors.white,
+        ),
+      ),
+      darkTheme: ThemeData.dark().copyWith(
+        colorScheme: ColorScheme.dark(
+          primary: Colors.deepPurpleAccent,
+          secondary: Colors.deepPurple,
+          surface: Colors.grey[900]!,
+          background: Colors.black,
+        ),
+      ),
+      home: MusicPlayerScreen(
+        isDarkMode: _themeMode == ThemeMode.dark,
+        onThemeToggle: _toggleTheme,
+        trackStatus: trackStatus,
+        currentTrack: _currentTrack,
+        onTrackSelect: _setCurrentTrack,
+        progress: _progress,
+      ),
+    );
+  }
+}
+
+class MusicPlayerScreen extends StatelessWidget {
+  final bool isDarkMode;
+  final Function(bool) onThemeToggle;
+  final Map<String, bool> trackStatus;
+  final String? currentTrack;
+  final Function(String) onTrackSelect;
+  final double progress;
+
+  const MusicPlayerScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.onThemeToggle,
+    required this.trackStatus,
+    required this.currentTrack,
+    required this.onTrackSelect,
+    required this.progress,
+  });
+
+  final List<Map<String, String>> tracks = const [
+    {'title': 'The Grudge', 'duration': '8:35'},
+    {'title': 'Eon Blue Apocalypse', 'duration': '1:04'},
+    {'title': 'The Patient', 'duration': '7:13'},
+    {'title': 'Mantra', 'duration': '1:12'},
+    {'title': 'Schism', 'duration': '6:43'},
+    {'title': 'Parabol', 'duration': '3:04'},
+    {'title': 'Parabola', 'duration': '6:03'},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.background,
+      appBar: AppBar(
+        title: const Text('StdID(1276026)-Day 15 - On/Off switch'),
+        leading: const Icon(Icons.arrow_back),
+        actions: const [Icon(Icons.more_vert)],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/lateralus.jpg',
+                fit: BoxFit.cover,
+                height: 200,
+                width: double.infinity,
+              ),
+            ),
+          ),
+          if (currentTrack != null) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '🎵 Now Playing: $currentTrack',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      color: theme.colorScheme.primary.withOpacity(0.7),
+                      offset: const Offset(1, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: LinearProgressIndicator(
+                value: progress,
+                color: theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.surface.withOpacity(0.3),
+              ),
+            ),
+          ],
+          Expanded(
+            child: ListView.builder(
+              itemCount: tracks.length,
+              itemBuilder: (context, index) {
+                final track = tracks[index];
+                final isActive = trackStatus[track['title']] ?? true;
+                final isPlaying = currentTrack == track['title'];
+
+                return TrackTile(
+                  number: '${index + 1}'.padLeft(2, '0'),
+                  title: track['title']!,
+                  duration: track['duration']!,
+                  isActive: isActive,
+                  isPlaying: isPlaying,
+                  onSelect: () => onTrackSelect(track['title']!),
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              border: Border(
+                top: BorderSide(
+                  color: theme.dividerColor,
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.dark_mode,
+                        color: isDarkMode
+                            ? theme.colorScheme.primary
+                            : theme.disabledColor),
+                    const SizedBox(width: 8),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Switch(
+                        key: ValueKey<bool>(isDarkMode),
+                        value: isDarkMode,
+                        onChanged: onThemeToggle,
+                        activeColor: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.light_mode,
+                        color: !isDarkMode
+                            ? theme.colorScheme.primary
+                            : theme.disabledColor),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isDarkMode ? 'Dark Mode Active' : 'Light Mode Active',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Toggle between Dark and Light modes to reduce eye strain.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TrackTile extends StatelessWidget {
+  final String number;
+  final String title;
+  final String duration;
+  final bool isActive;
+  final bool isPlaying;
+  final VoidCallback onSelect;
+
+  const TrackTile({
+    super.key,
+    required this.number,
+    required this.title,
+    required this.duration,
+    required this.isActive,
+    required this.isPlaying,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: isActive ? onSelect : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: isPlaying
+              ? theme.colorScheme.secondary.withOpacity(0.2)
+              : isActive
+                  ? theme.colorScheme.surface
+                  : theme.colorScheme.error.withOpacity(0.1),
+          border: isPlaying
+              ? Border.all(color: theme.colorScheme.primary, width: 1.5)
+              : null,
+          boxShadow: isPlaying
+              ? [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withOpacity(0.3),
+                    offset: const Offset(0, 3),
+                    blurRadius: 6,
+                  )
+                ]
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 40,
+                child: Text(
+                  number,
+                  style: TextStyle(
+                    color: isActive
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.error,
+                    fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    if (isPlaying) ...[
+                      const Icon(Icons.play_arrow, size: 20),
+                      const SizedBox(width: 4),
+                    ],
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: isActive
+                              ? theme.colorScheme.onSurface
+                              : theme.colorScheme.error,
+                          fontSize: 16,
+                          fontWeight:
+                              isPlaying ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                duration,
+                style: TextStyle(
+                  color: isActive
+                      ? theme.colorScheme.onSurface.withOpacity(0.7)
+                      : theme.colorScheme.error,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
